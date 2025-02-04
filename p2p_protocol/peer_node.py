@@ -55,16 +55,8 @@ class PeerNode:
     def start(self):
         self.register_with_seeds()
         self.connect_to_peers()
-        threading.Thread(target=self.gossip).start()
         threading.Thread(target=self.check_liveness).start()
         threading.Thread(target=self.user_input).start()  # Start user input thread
-
-    def gossip(self):
-        while True:
-            message = input("Enter a message to broadcast (or 'exit' to quit): ")
-            if message.lower() == "exit":
-                break
-            self.broadcast_message(message)
 
     def broadcast_message(self, message):
         message = f"{time.time()}:{self.ip}:{message}"
