@@ -132,6 +132,6 @@ class PeerNode:
             self.broadcast_message(message)
 
 if __name__ == "__main__":
-    seeds = [{"ip": "172.31.98.231", "port": 5000}]  # Your laptop's IP and port
+    seeds = [{"ip": "172.31.98.231", "port": 8000}]  # Your laptop's IP and port
     peer = PeerNode("172.31.92.206", 6000, seeds)  # Your friend's IP and port
     peer.start()
