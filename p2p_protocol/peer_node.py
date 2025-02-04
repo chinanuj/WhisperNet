@@ -1,7 +1,7 @@
 import socket
 import threading
 import time
-import random
+import logging
 
 class PeerNode:
     def __init__(self, ip, port, seeds):
@@ -13,6 +13,14 @@ class PeerNode:
         self.lock = threading.Lock()  # Ensures thread-safe access to shared data
         self.ping_failures = {}  # Tracks ping failures for each peer
 
+        # Configure logging
+        logging.basicConfig(
+            filename="peer_log.txt",
+            level=logging.INFO,
+            format="%(asctime)s - %(message)s",
+        )
+        logging.info(f"Peer node started at {self.ip}:{self.port}")
+
     def register_with_seeds(self):
         for seed in self.seeds:
             try:
@@ -22,9 +30,11 @@ class PeerNode:
                 response = sock.recv(1024)
                 if response == b"OK":
                     print(f"Registered with seed {seed['ip']}:{seed['port']}")
+                    logging.info(f"Registered with seed {seed['ip']}:{seed['port']}")
                 sock.close()
             except Exception as e:
                 print(f"Failed to register with seed {seed['ip']}:{seed['port']}: {e}")
+                logging.error(f"Failed to register with seed {seed['ip']}:{seed['port']}: {e}")
 
     def connect_to_peers(self):
         for seed in self.seeds:
@@ -40,6 +50,7 @@ class PeerNode:
                 sock.close()
             except Exception as e:
                 print(f"Failed to get peers from seed {seed['ip']}:{seed['port']}: {e}")
+                logging.error(f"Failed to get peers from seed {seed['ip']}:{seed['port']}: {e}")
 
     def start(self):
         self.register_with_seeds()
@@ -53,20 +64,26 @@ class PeerNode:
             message = input("Enter a message to broadcast (or 'exit' to quit): ")
             if message.lower() == "exit":
                 break
-            message = f"{time.time()}:{self.ip}:{message}"
-            message_hash = hash(message)
-            with self.lock:
-                self.message_list[message_hash] = {"sent_to": set(), "received_from": set()}
-            for peer in list(self.connected_peers):
-                try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.connect((peer[0], peer[1]))
-                    sock.send(message.encode())
-                    with self.lock:
-                        self.message_list[message_hash]["sent_to"].add(peer)
-                    sock.close()
-                except Exception as e:
-                    print(f"Failed to send message to peer {peer[0]}:{peer[1]}: {e}")
+            self.broadcast_message(message)
+
+    def broadcast_message(self, message):
+        message = f"{time.time()}:{self.ip}:{message}"
+        message_hash = hash(message)
+        with self.lock:
+            self.message_list[message_hash] = {"sent_to": set(), "received_from": set()}
+        for peer in list(self.connected_peers):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((peer[0], peer[1]))
+                sock.send(message.encode())
+                with self.lock:
+                    self.message_list[message_hash]["sent_to"].add(peer)
+                sock.close()
+                print(f"Sent message to {peer[0]}:{peer[1]}: {message}")
+                logging.info(f"Sent message to {peer[0]}:{peer[1]}: {message}")
+            except Exception as e:
+                print(f"Failed to send message to peer {peer[0]}:{peer[1]}: {e}")
+                logging.error(f"Failed to send message to peer {peer[0]}:{peer[1]}: {e}")
 
     def check_liveness(self):
         while True:
@@ -102,8 +119,10 @@ class PeerNode:
                 sock.send(f"Dead Node:{peer[0]}:{peer[1]}:{time.time()}:{self.ip}".encode())
                 sock.close()
                 print(f"Reported dead node: {peer[0]}:{peer[1]}")
+                logging.info(f"Reported dead node: {peer[0]}:{peer[1]}")
             except Exception as e:
                 print(f"Failed to report dead node to seed {seed['ip']}:{seed['port']}: {e}")
+                logging.error(f"Failed to report dead node to seed {seed['ip']}:{seed['port']}: {e}")
 
     def user_input(self):
         while True:
@@ -112,23 +131,7 @@ class PeerNode:
                 break
             self.broadcast_message(message)
 
-    def broadcast_message(self, message):
-        message = f"{time.time()}:{self.ip}:{message}"
-        message_hash = hash(message)
-        with self.lock:
-            self.message_list[message_hash] = {"sent_to": set(), "received_from": set()}
-        for peer in list(self.connected_peers):
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((peer[0], peer[1]))
-                sock.send(message.encode())
-                with self.lock:
-                    self.message_list[message_hash]["sent_to"].add(peer)
-                sock.close()
-            except Exception as e:
-                print(f"Failed to send message to peer {peer[0]}:{peer[1]}: {e}")
-
 if __name__ == "__main__":
-    seeds = [{"ip": "172.31.98.231", "port": 8000}]  # Your laptop's IP and port
-    peer = PeerNode("172.31.92.206", 5000, seeds)  # Your friend's IP and port
+    seeds = [{"ip": "172.31.98.231", "port": 5000}]  # Your laptop's IP and port
+    peer = PeerNode("172.31.92.206", 6000, seeds)  # Your friend's IP and port
     peer.start()
