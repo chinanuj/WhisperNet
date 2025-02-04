@@ -42,5 +42,5 @@ class SeedNode:
             client.close()
 
 if __name__ == "__main__":
-    seed = SeedNode("127.0.0.1", 5000)  # Example IP and port
+    seed = SeedNode("172.31.98.231", 5000)  # Your laptop's IP and port
     seed.start()

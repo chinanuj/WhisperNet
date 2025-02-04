@@ -9,13 +9,13 @@ def start_peer(ip, port, seeds):
 
 if __name__ == "__main__":
     # Start seed nodes
-    seed1 = start_seed("127.0.0.1", 5000)
-    seed2 = start_seed("127.0.0.1", 5001)
+    seed1 = start_seed("172.31.98.231", 8000)
+    seed2 = start_seed("172.31.98.231", 5001)
     time.sleep(2)  # Wait for seeds to start
 
     # Start peer nodes
-    peer1 = start_peer("127.0.0.1", 6000, ["127.0.0.1:5000", "127.0.0.1:5001"])
-    peer2 = start_peer("127.0.0.1", 6001, ["127.0.0.1:5000", "127.0.0.1:5001"])
+    peer1 = start_peer("172.31.98.231", 6000, ["172.31.98.231:8000", "172.31.98.231:5001"])
+    peer2 = start_peer("172.31.98.231", 6001, ["172.31.98.231:8000", "172.31.98.231:5001"])
     time.sleep(2)  # Wait for peers to register
 
     # Let the system run for a while

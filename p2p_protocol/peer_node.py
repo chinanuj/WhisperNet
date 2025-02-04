@@ -103,6 +103,6 @@ class PeerNode:
                 print(f"Failed to report dead node to seed {seed['ip']}:{seed['port']}: {e}")
 
 if __name__ == "__main__":
-    seeds = [{"ip": "127.0.0.1", "port": 5000}]  # Example seed configuration
-    peer = PeerNode("127.0.0.1", 6000, seeds)  # Example peer IP and port
+    seeds = [{"ip": "172.31.98.231", "port": 5000}]  # Your laptop's IP and port
+    peer = PeerNode("172.31.92.206", 6000, seeds)  # Your friend's IP and port
     peer.start()
