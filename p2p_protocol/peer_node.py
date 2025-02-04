@@ -46,10 +46,14 @@ class PeerNode:
         self.connect_to_peers()
         threading.Thread(target=self.gossip).start()
         threading.Thread(target=self.check_liveness).start()
+        threading.Thread(target=self.user_input).start()  # Start user input thread
 
     def gossip(self):
-        for i in range(10):
-            message = f"{time.time()}:{self.ip}:{i}"
+        while True:
+            message = input("Enter a message to broadcast (or 'exit' to quit): ")
+            if message.lower() == "exit":
+                break
+            message = f"{time.time()}:{self.ip}:{message}"
             message_hash = hash(message)
             with self.lock:
                 self.message_list[message_hash] = {"sent_to": set(), "received_from": set()}
@@ -63,7 +67,6 @@ class PeerNode:
                     sock.close()
                 except Exception as e:
                     print(f"Failed to send message to peer {peer[0]}:{peer[1]}: {e}")
-            time.sleep(5)
 
     def check_liveness(self):
         while True:
@@ -102,7 +105,30 @@ class PeerNode:
             except Exception as e:
                 print(f"Failed to report dead node to seed {seed['ip']}:{seed['port']}: {e}")
 
+    def user_input(self):
+        while True:
+            message = input("Enter a message to broadcast (or 'exit' to quit): ")
+            if message.lower() == "exit":
+                break
+            self.broadcast_message(message)
+
+    def broadcast_message(self, message):
+        message = f"{time.time()}:{self.ip}:{message}"
+        message_hash = hash(message)
+        with self.lock:
+            self.message_list[message_hash] = {"sent_to": set(), "received_from": set()}
+        for peer in list(self.connected_peers):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((peer[0], peer[1]))
+                sock.send(message.encode())
+                with self.lock:
+                    self.message_list[message_hash]["sent_to"].add(peer)
+                sock.close()
+            except Exception as e:
+                print(f"Failed to send message to peer {peer[0]}:{peer[1]}: {e}")
+
 if __name__ == "__main__":
-    seeds = [{"ip": "172.31.98.231", "port": 5000}]  # Your laptop's IP and port
-    peer = PeerNode("172.31.92.206", 6000, seeds)  # Your friend's IP and port
+    seeds = [{"ip": "172.31.98.231", "port": 8000}]  # Your laptop's IP and port
+    peer = PeerNode("172.31.92.206", 5000, seeds)  # Your friend's IP and port
     peer.start()
