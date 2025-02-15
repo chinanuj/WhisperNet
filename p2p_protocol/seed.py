@@ -1,90 +1,80 @@
-import socket
-import time
-from concurrent.futures import ThreadPoolExecutor
-import json
-import pandas as pd
-import sys
-from copy import deepcopy
+import socket 
+import threading
+import logging
 
-MAX_threads = 100
-peer_list = []
-terminate_flag = False
-def read_config():
-    seeds_list = pd.read_csv('config.csv')
-
-    seeds_dict = {}
-    for i in range(len(seeds_list)):
-        seeds_dict[seeds_list.iloc[i,0]] = [seeds_list.iloc[i,1], seeds_list.iloc[i,2]]
-
-    return seeds_dict
-
-
-def get_time():
-    timestamp = time.time()
-    formatted_timestamp = time.strftime("%H:%M:%S %d/%m/%Y", time.localtime(timestamp))
-
-    return formatted_timestamp
+class Seed:
+    def __init__(self,port,ip='localhost'):
+        self.ip=ip
+        self.port=port
+        self.seed_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.seed_socket.bind((self.ip,self.port))
+        self.peerlist = []
+        logging.info(f'Seed Started with Address {self.ip}:{self.port}')
     
-def listen_peers(server_socket,seed_num):
-    global MAX_threads,peer_list,terminate_flag
-    with ThreadPoolExecutor(max_workers=MAX_threads) as executor:
+    def listen(self):
+        print(f'Seed Listening on {self.ip}:{self.port}')
+        self.seed_socket.listen(15)
+        while True:
+            try:
+                peer, addr = self.seed_socket.accept()
+                thread_for_peer = threading.Thread(target=self.handle_peer,args=(peer,addr))
+                thread_for_peer.start()
+            except Exception as e:
+                print(f"Error Occured(listen Module of Seed.py) : {e}")
+
+    def dead_node(self, peer, message):
+        if (message[1], int(message[2])) in self.peerlist:
+            self.peerlist.remove((message[1], int(message[2])))
+            peer.close()
+            print(f"Dead Node:{message[1]}:{message[2]}:{message[3]}:{message[4]}:{message[5]}")
+            logging.info(f'Dead node {message[1]}:{message[2]} removed from peer list of seed and this is reported by {message[4]}:{message[5]}')
+        else:
+            print(f"Dead node {message[1]}:{message[2]} already removed")
+            logging.info(f'Dead node {message[1]}:{message[2]} already removed from peer list of seed and this is reported by {message[4]}:{message[5]}')
+
+    def register(self, peer, message):
+        self.peerlist.append((message[1], int(message[2])))
+        peer.send('registered successfully'.encode())
+        print(f"Peer registered successfully with seed with address {self.ip}:{self.port}")
+        logging.info(f'{message[1]}:{message[2]} registered to seed with address {self.ip}:{self.port}')
+
+    def sendpeerlist(self, peer, message):
+        lst = str()
+        for i in self.peerlist:
+            lst += f":{i[0]}#{str(i[1])}"
+        peer.send(f"peer list:{lst}".encode())
+
+    def handle_peer(self, peer, addr):
         try:
-            while not terminate_flag:
-                peer_socket, peer_address = server_socket.accept()
-                tie = get_time()
-                peer_port = peer_socket.recv(1024).decode()
-                log_connection(peer_address,tie,seed_num)
-                print(f"Accepted connection from {peer_address}")
-                executor.submit(handle_peers, peer_socket)
-                lst = [peer_address[0],int(peer_port)]
-                peer_list.append(lst)
-        finally:
-            terminate_flag = True
-            server_socket.close()
-            print("close")
+            while True:
+                message = peer.recv(1024).decode()
+                message = message.split(':')
+                print(f"Message from {addr} : {message}")
+                if message[0] == 'peer list':
+                    self.sendpeerlist(peer,message)
+                if message[0] == 'register':
+                    self.register(peer, message)
+                if message[0] == 'Dead Node':
+                    self.dead_node(peer, message)
 
-def handle_peers(peer_socket):
-    global peer_list
-    try:
-        data = deepcopy(peer_list)
-        json_data = json.dumps(data)
-        peer_socket.sendall(json_data.encode())
-        print(data)
-    finally:
-        peer_socket.close()
+        except Exception as e:
+            if isinstance(e, OSError) and e.winerror == 10038:  
+                pass
+            else:
+                print(f"Error Occurred (Handling Peer module): {e}")
+                logging.info(f'Error Occurred (Handling Peer module): {e}')
 
-
-def log_connection(det,tim,num):
-
-    with open('outputfile.txt', 'a') as file:
-        file.write("For Seed Num: "+str(num)+" Peer Registration:- \n")
-        file.write(str(tim)+"                  ")
-        file.write(str(det)+ "\n")
-
-def remove_dead():
-    print("Lorem Ipsum!")
-
-def log_removal(det,tim,num):
-    with open('outputfile.txt', 'a') as file:
-        file.write("For Seed Num: "+str(num)+" Peer Registration:- \n")
-        file.write(str(tim)+"                  ")
-        file.write(str(det)+ "\n")
-    print("Lorem Ipsum!")
-
-
-def main(seed_num):
-    seeds = read_config()
-    seed = seeds[seed_num]
-    print(seed_num)
-    seed_host = seed[0]
-    seed_port = seed[1]
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((seed_host, seed_port))
-    server_socket.listen(100)
-    listen_peers(server_socket,seed_num)
-    print("Lorem Ipsum!")
-
-
+            
 if __name__ == '__main__':
-    SEED_NUM = int(sys.argv[1])
-    main(SEED_NUM)
+    logging.basicConfig(level=logging.INFO,filename='outputfile.log',format='%(asctime)s:%(message)s')
+    port=int(input('Enter port to connect to: '))
+    seed = Seed(port=port)
+    seed.listen()
+
+'''
+Because 5051 is the peer's listening port (where other peers can connect to it), but when it makes outgoing connections, it uses random ephemeral ports assigned by the OS.
+Think of it like this:
+
+Port 5051 is like your peer's "home address" where others can find it
+The random ports (54376, 54377, etc.) are like temporary "return addresses" used when your peer visits different seeds
+'''
