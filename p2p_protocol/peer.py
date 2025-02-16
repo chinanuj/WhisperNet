@@ -101,11 +101,10 @@ class Peer:
 
     def listen(self):
         print(f'Peer Listening on {self.ip}:{self.port}')
-        self.peer_socker.listen(15)
+        self.peer_socker.listen(20)
         while True:
             try:
                 peer, _ = self.peer_socker.accept()
-                # Check if we can accept new peers before adding to sockets
                 if not self.can_accept_peers():
                     print(f"Maximum peer limit ({self.max_peers}) reached. Rejecting new connection.")
                     peer.close()
@@ -192,7 +191,6 @@ class Peer:
                     break
                 new_socket.send(add_padding("Connection with Peer:{0}:{1}").format(self.ip,self.port).encode())
             
-            print(f"Current peer count: {len(self.addr_socket_map)}/{self.max_peers}")
             logging.info(f"Peer {self.ip}:{self.port} - Current peers: {len(self.addr_socket_map)}, Max peers: {self.max_peers}")
             
             sleep(1)
@@ -252,7 +250,7 @@ class Peer:
                     print(f"Dead Node:{message[1]}:{message[2]}:{message[3]}:{message[4]}:{message[5]}")
                     print("Peer removed from available peers: ", self.socket_addr_map[new_socket])
                     break
-
+                sleep(1)
             except Exception as e:
                 print(f"Connection lost with peer {self.socket_addr_map.get(new_socket, 'unknown')}: {e}")
                 break
@@ -297,7 +295,7 @@ class Peer:
             except Exception as e:
                 print(f"Failed to send gossip message: {e}")
                 break
-            sleep(0)
+            sleep(5)
 
     def remove_dead_peer(self, socket):
         try:
