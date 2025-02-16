@@ -101,10 +101,11 @@ class Peer:
 
     def listen(self):
         print(f'Peer Listening on {self.ip}:{self.port}')
-        self.peer_socker.listen(20)
+        self.peer_socker.listen(15)
         while True:
             try:
                 peer, _ = self.peer_socker.accept()
+                # Check if we can accept new peers before adding to sockets
                 if not self.can_accept_peers():
                     print(f"Maximum peer limit ({self.max_peers}) reached. Rejecting new connection.")
                     peer.close()
