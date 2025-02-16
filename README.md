@@ -124,6 +124,9 @@ def dead_node(self, peer, message):
     # Notifies other peers
 ```
 
+![image](https://github.com/user-attachments/assets/1f89fa2e-f3cb-4486-9319-67cb5feed3f9)
+
+
 ## Network Security Features
 
 ### Message Security
