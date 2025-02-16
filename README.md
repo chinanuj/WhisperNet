@@ -180,7 +180,7 @@ def analyze_degrees_plot():
     # Calculates distribution
     # Generates matplotlib visualization
 ```
-![it take time to Settle the network connection, graph looks good after 5 min to be precise](https://github.com/user-attachments/assets/178b256a-e9ea-41f7-a6ec-e92270da2e35)
+![image](https://github.com/user-attachments/assets/357cbc74-b5cb-4f17-a277-b3517bf7f306)
 
 ## Advanced Usage
 
