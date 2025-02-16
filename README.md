@@ -171,7 +171,7 @@ peer_id=>degree
 ### Degree Calculation
 - Based on node ID
 - Exponential decay function
-- Maximum of 40 connections
+- Maximum of 60 connections
 
 ### Visualization
 ```python
@@ -180,6 +180,7 @@ def analyze_degrees_plot():
     # Calculates distribution
     # Generates matplotlib visualization
 ```
+![it take time to Settle the network connection, graph looks good after 5 min to be precise](https://github.com/user-attachments/assets/178b256a-e9ea-41f7-a6ec-e92270da2e35)
 
 ## Advanced Usage
 
